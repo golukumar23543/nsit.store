@@ -17,6 +17,9 @@ const App: React.FC = () => {
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isPasswordPromptOpen, setIsPasswordPromptOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -68,10 +71,24 @@ const App: React.FC = () => {
   const handleLogoClick = () => {
     setClickCount(prev => prev + 1);
     if (clickCount + 1 >= 3) {
-      setIsAdminOpen(true);
+      setIsPasswordPromptOpen(true);
       setClickCount(0);
     }
     setTimeout(() => setClickCount(0), 1000);
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminPassword === '#golu@91020') {
+      setIsAdminOpen(true);
+      setIsPasswordPromptOpen(false);
+      setAdminPassword('');
+      setPasswordError(false);
+      showToast('Admin Access Granted');
+    } else {
+      setPasswordError(true);
+      setTimeout(() => setPasswordError(false), 2000);
+    }
   };
 
   return (
@@ -243,6 +260,49 @@ const App: React.FC = () => {
       <ChatBot isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
       
       {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
+      
+      {/* Admin Password Prompt Modal */}
+      {isPasswordPromptOpen && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-brand-navy/60 backdrop-blur-md" onClick={() => setIsPasswordPromptOpen(false)}></div>
+          <div className="relative w-full max-w-sm bg-white rounded-[24px] shadow-2xl p-8 animate-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-brand-navy text-white rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
+              <i className="fas fa-lock text-2xl"></i>
+            </div>
+            <h3 className="text-xl font-bold text-center text-brand-navy mb-2">Admin Authentication</h3>
+            <p className="text-slate-500 text-sm text-center mb-8">Enter the secret key to access the terminal.</p>
+            
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <input 
+                  autoFocus
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Password"
+                  className={`w-full bg-slate-50 border ${passwordError ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'} rounded-xl px-5 py-3 outline-none focus:ring-4 focus:ring-brand-navy/5 transition-all text-center font-mono`}
+                />
+                {passwordError && <p className="text-red-500 text-[10px] font-bold uppercase mt-2 text-center tracking-widest animate-pulse">Access Denied</p>}
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsPasswordPromptOpen(false)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 py-3 bg-brand-navy text-white font-bold rounded-xl hover:bg-brand-navyLight transition-all text-sm shadow-lg shadow-brand-navy/20"
+                >
+                  Verify Access
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       
       {toastMessage && <Toast message={toastMessage} />}
     </div>
