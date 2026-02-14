@@ -1,4 +1,3 @@
-
 import { Product } from './types';
 
 export const PRODUCTS: Product[] = [
@@ -148,7 +147,7 @@ export const STORE_CONTACT = {
   upi: 'golukumar06@ptyes',
   support: '+91 87091 07808',
   binanceId: '1156054384',
-  instagram: '@ott_seller456',
+  instagram: '@ott_seller455',
   telegram: '@ott_seller455',
   twitter: '@whitedevil23543'
 };
