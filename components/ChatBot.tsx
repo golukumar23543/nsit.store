@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
 import { askGemini } from '../geminiService';
@@ -34,32 +33,32 @@ const ChatBot: React.FC<ChatBotProps> = ({ isOpen, setIsOpen }) => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end">
+    <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[100] flex flex-col items-end">
       {isOpen && (
-        <div className="w-[340px] h-[500px] bg-white rounded-[32px] shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
-          <div className="bg-gradient-to-r from-brand-navy to-brand-terracotta p-5 flex items-center justify-between">
+        <div className="w-[calc(100vw-2rem)] sm:w-[340px] h-[70vh] sm:h-[500px] bg-white rounded-[24px] md:rounded-[32px] shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-gradient-to-r from-brand-navy to-brand-terracotta p-4 md:p-5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-white text-xs">
                 <i className="fas fa-sparkles"></i>
               </div>
-              <span className="text-white font-bold tracking-tight">NSIP AI assistant</span>
+              <span className="text-white font-bold tracking-tight text-sm md:text-base">NSIP AI Assistant</span>
             </div>
             <button 
               onClick={() => setIsOpen(false)}
-              className="text-white/60 hover:text-white transition-colors"
+              className="text-white/60 hover:text-white transition-colors p-2"
             >
               <i className="fas fa-times"></i>
             </button>
           </div>
 
-          <div className="flex-grow overflow-y-auto p-5 space-y-4 bg-[#f9fbfd]">
+          <div className="flex-grow overflow-y-auto p-4 md:p-5 space-y-4 bg-[#f9fbfd]">
             {messages.map((msg, i) => (
               <div 
                 key={i} 
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div className={`
-                  max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm
+                  max-w-[85%] px-4 py-2.5 rounded-2xl text-xs md:text-sm leading-relaxed shadow-sm
                   ${msg.role === 'user' 
                     ? 'bg-brand-navy text-white rounded-br-none' 
                     : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'}
@@ -80,21 +79,21 @@ const ChatBot: React.FC<ChatBotProps> = ({ isOpen, setIsOpen }) => {
             <div ref={chatEndRef} />
           </div>
 
-          <div className="p-4 bg-white border-t border-slate-200 flex gap-2">
+          <div className="p-3 md:p-4 bg-white border-t border-slate-200 flex gap-2 shrink-0">
             <input 
               type="text" 
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Type your message..."
-              className="flex-grow bg-slate-50 border border-slate-100 rounded-2xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-navy/10 transition-all"
+              className="flex-grow bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl px-4 py-2 md:py-2.5 text-xs md:text-sm outline-none focus:ring-2 focus:ring-brand-navy/10 transition-all"
             />
             <button 
               onClick={handleSend}
               disabled={isLoading || !input.trim()}
-              className="w-10 h-10 bg-brand-navy text-white rounded-2xl flex items-center justify-center disabled:opacity-50 transition-all hover:scale-105"
+              className="w-10 h-10 md:w-12 md:h-12 bg-brand-navy text-white rounded-xl md:rounded-2xl flex items-center justify-center disabled:opacity-50 transition-all hover:scale-105 shrink-0"
             >
-              <i className="fas fa-paper-plane text-xs"></i>
+              <i className="fas fa-paper-plane text-xs md:text-sm"></i>
             </button>
           </div>
         </div>
@@ -103,11 +102,11 @@ const ChatBot: React.FC<ChatBotProps> = ({ isOpen, setIsOpen }) => {
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          w-16 h-16 rounded-full flex items-center justify-center text-white shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95
+          w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95
           ${isOpen ? 'bg-brand-terracotta rotate-90' : 'bg-gradient-to-br from-brand-navy to-brand-terracotta'}
         `}
       >
-        <i className={`fas ${isOpen ? 'fa-times text-xl' : 'fa-robot text-2xl'}`}></i>
+        <i className={`fas ${isOpen ? 'fa-times text-xl' : 'fa-robot text-xl md:text-2xl'}`}></i>
       </button>
     </div>
   );
