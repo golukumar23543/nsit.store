@@ -10,49 +10,65 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd }) => {
   const [imgError, setImgError] = useState(false);
 
   return (
-    <div className="group bg-white rounded-[20px] md:rounded-[28px] overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl md:hover:-translate-y-2 transition-all duration-300 relative flex flex-col h-full">
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-navy to-brand-terracotta opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    <div className="group relative bg-slate-900/40 rounded-[32px] overflow-hidden border border-white/5 hover:border-brand-terracotta/30 shadow-2xl hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 flex flex-col h-full">
+      {/* Premium Glow Effect on Hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-brand-terracotta/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
       
-      <div className="relative h-48 md:h-60 overflow-hidden bg-slate-100 shrink-0 flex items-center justify-center">
+      {/* Image Container */}
+      <div className="relative h-56 md:h-64 overflow-hidden shrink-0">
         {!imgError ? (
           <img 
             src={product.img} 
             alt={product.name}
             onError={() => setImgError(true)}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-            <i className="fas fa-image text-3xl mb-2 opacity-50"></i>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Image Preview Unavailable</span>
+          <div className="w-full h-full bg-slate-800 flex flex-col items-center justify-center text-slate-500 p-8 text-center">
+            <i className="fas fa-image text-4xl mb-3 opacity-20"></i>
+            <span className="text-[10px] font-black uppercase tracking-widest opacity-50">Preview Unavailable</span>
           </div>
         )}
-        <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-white/95 backdrop-blur px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[9px] md:text-[10px] font-bold text-slate-800 flex items-center gap-1 shadow-sm">
+        
+        {/* Rating Badge */}
+        <div className="absolute top-4 right-4 bg-slate-950/80 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-[10px] font-black text-white flex items-center gap-1.5 shadow-lg">
           <i className="fas fa-star text-brand-terracotta"></i> {product.rating}
+        </div>
+
+        {/* Category Label Overlay */}
+        <div className="absolute bottom-4 left-4 bg-brand-terracotta px-3 py-1 rounded-lg text-[9px] font-black text-white uppercase tracking-[0.2em] shadow-xl">
+          {product.cat}
         </div>
       </div>
 
-      <div className="p-4 md:p-6 flex flex-col flex-grow">
-        <span className="text-[9px] md:text-[10px] uppercase font-bold tracking-widest text-brand-terracotta mb-1">{product.cat}</span>
-        <h3 className="text-base md:text-xl font-bold text-slate-900 mb-1 line-clamp-1">{product.name}</h3>
-        <p className="text-xs md:text-sm text-slate-500 mb-4 line-clamp-2 leading-relaxed min-h-[2.5rem] md:min-h-[3rem]">{product.desc}</p>
+      {/* Content Area */}
+      <div className="p-6 md:p-8 flex flex-col flex-grow relative z-10">
+        <h3 className="text-xl md:text-2xl font-black text-white mb-3 group-hover:text-brand-terracotta transition-colors line-clamp-1">{product.name}</h3>
+        <p className="text-xs md:text-sm text-slate-400 mb-6 line-clamp-2 leading-relaxed font-medium min-h-[3rem] opacity-70">
+          {product.desc}
+        </p>
         
-        <div className="flex items-center gap-1.5 md:gap-2 mb-4 bg-slate-100 w-fit px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-semibold text-brand-navy">
-          <i className="fas fa-shopping-bag text-[8px] md:text-[10px]"></i> {product.orderCount} <span className="hidden xs:inline">orders</span>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-1 rounded-full text-[10px] font-bold text-slate-400">
+            <i className="fas fa-fire-flame-curved text-orange-400"></i> {product.orderCount} <span className="opacity-60">Sales</span>
+          </div>
+          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full text-[9px] font-black text-emerald-400 uppercase tracking-widest">
+            Verified
+          </div>
         </div>
 
-        <div className="mt-auto flex items-center justify-between">
+        <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-lg md:text-2xl font-black text-brand-navy leading-none">₹{product.price}</span>
-            <span className="text-[9px] md:text-[11px] font-medium text-slate-400 mt-1 md:mt-1.5 bg-slate-50 px-1.5 md:px-2 py-0.5 rounded-full inline-block">Approx {product.usd}</span>
+            <span className="text-2xl md:text-3xl font-black text-white tracking-tighter">₹{product.price}</span>
+            <span className="text-[10px] font-black text-slate-500 mt-1 uppercase tracking-widest">Global Est: {product.usd}</span>
           </div>
           <button 
             onClick={onAdd}
             aria-label="Add to cart"
-            className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-brand-navy to-brand-navyLight text-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-md hover:shadow-lg hover:from-brand-terracotta hover:to-brand-terracottaLight transition-all duration-300 active:scale-90"
+            className="w-12 h-12 md:w-14 md:h-14 bg-white text-slate-950 rounded-2xl flex items-center justify-center shadow-xl hover:bg-brand-terracotta hover:text-white hover:-translate-y-1 transition-all active:scale-90"
           >
-            <i className="fas fa-cart-plus text-sm md:text-base"></i>
+            <i className="fas fa-plus text-base md:text-lg"></i>
           </button>
         </div>
       </div>

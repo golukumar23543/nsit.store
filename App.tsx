@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Product, CartItem, Category } from './types';
-import { PRODUCTS, STORE_CONTACT } from './constants';
+import { PRODUCTS as INITIAL_PRODUCTS, STORE_CONTACT } from './constants';
 import Header from './components/Header';
 import CategoryBar from './components/CategoryBar';
 import ProductCard from './components/ProductCard';
@@ -8,13 +8,22 @@ import CartSidebar from './components/CartSidebar';
 import ChatBot from './components/ChatBot';
 import AdminDashboard from './components/AdminDashboard';
 import Toast from './components/Toast';
+import Hero from './components/Hero';
 
 const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<Category>('all');
+  
+  // Products as state to allow dynamic updates
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('nsip_inventory');
+    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+  });
+
   const [cart, setCart] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('nsip_cart');
     return saved ? JSON.parse(saved) : [];
   });
+
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isPasswordPromptOpen, setIsPasswordPromptOpen] = useState(false);
@@ -23,9 +32,17 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Triple-click tracking for Admin Access
+  const logoClickTimer = useRef<number | null>(null);
+  const logoClickCount = useRef(0);
+
   useEffect(() => {
     localStorage.setItem('nsip_cart', JSON.stringify(cart));
   }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem('nsip_inventory', JSON.stringify(products));
+  }, [products]);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -54,10 +71,25 @@ const App: React.FC = () => {
     showToast('Cart cleared');
   }, [showToast]);
 
+  const addProduct = useCallback((product: Product) => {
+    setProducts(prev => [product, ...prev]);
+    showToast('Asset deployed to inventory');
+  }, [showToast]);
+
+  const removeProduct = useCallback((id: string) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
+    showToast('Asset removed from inventory');
+  }, [showToast]);
+
+  const updateProduct = useCallback((updatedProduct: Product) => {
+    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    showToast('Asset data recalibrated');
+  }, [showToast]);
+
   const filteredProducts = useMemo(() => {
-    if (activeCategory === 'all') return PRODUCTS;
-    return PRODUCTS.filter(p => p.cat === activeCategory);
-  }, [activeCategory]);
+    if (activeCategory === 'all') return products;
+    return products.filter(p => p.cat === activeCategory);
+  }, [activeCategory, products]);
 
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -67,15 +99,23 @@ const App: React.FC = () => {
     return cart.reduce((sum, item) => sum + item.quantity, 0);
   }, [cart]);
 
-  const [clickCount, setClickCount] = useState(0);
-  const handleLogoClick = () => {
-    setClickCount(prev => prev + 1);
-    if (clickCount + 1 >= 3) {
-      setIsPasswordPromptOpen(true);
-      setClickCount(0);
+  // Triple click handler for the logo
+  const handleLogoClick = useCallback(() => {
+    logoClickCount.current += 1;
+    
+    if (logoClickTimer.current) {
+      window.clearTimeout(logoClickTimer.current);
     }
-    setTimeout(() => setClickCount(0), 1000);
-  };
+
+    if (logoClickCount.current === 3) {
+      setIsPasswordPromptOpen(true);
+      logoClickCount.current = 0;
+    } else {
+      logoClickTimer.current = window.setTimeout(() => {
+        logoClickCount.current = 0;
+      }, 500); // 500ms window to complete the 3 clicks
+    }
+  }, []);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,20 +132,29 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-['Inter'] selection:bg-brand-terracotta/20">
+    <div className="min-h-screen flex flex-col bg-[#050b16] font-['Inter'] selection:bg-brand-terracotta/20 relative">
+      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand-navy/30 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-brand-terracotta/10 rounded-full blur-[120px] pointer-events-none"></div>
+
       <Header 
         cartCount={cartCount} 
         onCartToggle={() => setIsCartOpen(true)} 
         onLogoClick={handleLogoClick}
       />
 
-      <main className="flex-grow container mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12">
-        <CategoryBar 
-          active={activeCategory} 
-          onChange={setActiveCategory} 
-        />
+      <Hero />
 
-        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8 mb-16 md:mb-20">
+      <main className="flex-grow container mx-auto px-4 md:px-6 lg:px-8 py-8 relative z-10">
+        <div className="flex flex-col items-center mb-12">
+          <div className="text-brand-terracotta font-black text-xs uppercase tracking-[0.4em] mb-4">Marketplace</div>
+          <h2 className="text-white text-3xl md:text-5xl font-black mb-10">Inventory</h2>
+          <CategoryBar 
+            active={activeCategory} 
+            onChange={setActiveCategory} 
+          />
+        </div>
+
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8 mb-16 md:mb-32">
           {filteredProducts.map(product => (
             <ProductCard 
               key={product.id} 
@@ -113,136 +162,106 @@ const App: React.FC = () => {
               onAdd={() => addToCart(product)} 
             />
           ))}
+          {filteredProducts.length === 0 && (
+            <div className="col-span-full py-20 text-center text-slate-500 font-bold uppercase tracking-widest opacity-40">
+              No assets found in this category
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-16 md:mb-20">
-          <div className="lg:col-span-2 bg-[#0c1729] rounded-[24px] md:rounded-[32px] p-6 md:p-12 shadow-2xl border border-slate-800">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">About NSIP Store</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-16 md:mb-24">
+          <div className="lg:col-span-2 bg-slate-900/50 backdrop-blur-xl rounded-[32px] md:rounded-[40px] p-6 md:p-12 border border-slate-800/50">
+            <h2 className="text-2xl md:text-4xl font-black text-white mb-6">About NSIP</h2>
             <div className="space-y-4 text-slate-400 text-sm md:text-lg leading-relaxed mb-8 md:mb-10">
               <p>
-                NSIP Store is a premium retail platform specializing in authentic clothing, lifestyle products, and high-end electronics. With years of industry expertise, we've built a reputation for reliability, transparency, and exceptional customer service.
+                NSIP Store is a elite digital procurement hub specializing in authentic software licenses, lifestyle products, and high-end studio gear.
               </p>
               <p>
-                Our mission is to make premium lifestyle tools and products accessible to everyone. We work directly with global suppliers to offer genuine products at competitive prices.
+                We focus on "Zero Waiting" delivery, ensuring your digital assets are delivered immediately upon confirmation.
               </p>
             </div>
 
-            <div className="bg-[#16213a] rounded-[20px] md:rounded-[24px] p-6 md:p-8 border border-slate-700/50">
-              <h3 className="text-white font-bold text-lg md:text-xl mb-6">Contact Information</h3>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+            <div className="bg-slate-800/30 rounded-[24px] md:rounded-[32px] p-6 md:p-10 border border-white/5">
+              <h3 className="text-white font-bold text-lg md:text-xl mb-6">Secure Channels</h3>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8">
                 <li className="flex items-center gap-4 group">
-                  <div className="w-10 h-10 shrink-0 rounded-full bg-slate-800 flex items-center justify-center text-brand-terracotta transition-colors group-hover:bg-brand-terracotta group-hover:text-white">
+                  <div className="w-12 h-12 shrink-0 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-terracotta transition-all group-hover:bg-brand-terracotta group-hover:text-white">
                     <i className="fas fa-phone-alt"></i>
                   </div>
                   <div className="overflow-hidden">
-                    <span className="text-slate-500 text-xs block">Primary:</span>
+                    <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider block">Terminal</span>
                     <a href={`tel:${STORE_CONTACT.phone}`} className="text-white font-bold hover:text-brand-terracotta transition-colors truncate block">{STORE_CONTACT.phone}</a>
                   </div>
                 </li>
                 <li className="flex items-center gap-4 group">
-                  <div className="w-10 h-10 shrink-0 rounded-full bg-slate-800 flex items-center justify-center text-brand-terracotta transition-colors group-hover:bg-brand-terracotta group-hover:text-white">
-                    <i className="fas fa-headset"></i>
-                  </div>
-                  <div className="overflow-hidden">
-                    <span className="text-slate-500 text-xs block">Support:</span>
-                    <a href={`tel:${STORE_CONTACT.support}`} className="text-white font-bold hover:text-brand-terracotta transition-colors truncate block">{STORE_CONTACT.support}</a>
-                  </div>
-                </li>
-                <li className="flex items-center gap-4 group">
-                  <div className="w-10 h-10 shrink-0 rounded-full bg-slate-800 flex items-center justify-center text-brand-terracotta transition-colors group-hover:bg-brand-terracotta group-hover:text-white">
+                  <div className="w-12 h-12 shrink-0 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-terracotta transition-all group-hover:bg-brand-terracotta group-hover:text-white">
                     <i className="fas fa-wallet"></i>
                   </div>
                   <div className="overflow-hidden">
-                    <span className="text-slate-500 text-xs block">UPI:</span>
+                    <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider block">Payments</span>
                     <span className="text-white font-bold truncate block">{STORE_CONTACT.upi}</span>
-                  </div>
-                </li>
-                <li className="flex items-center gap-4 group">
-                  <div className="w-10 h-10 shrink-0 rounded-full bg-slate-800 flex items-center justify-center text-brand-terracotta transition-colors group-hover:bg-brand-terracotta group-hover:text-white">
-                    <i className="fas fa-coins"></i>
-                  </div>
-                  <div className="overflow-hidden">
-                    <span className="text-slate-500 text-xs block">Binance ID:</span>
-                    <span className="text-white font-bold truncate block">{STORE_CONTACT.binanceId}</span>
                   </div>
                 </li>
               </ul>
             </div>
           </div>
 
-          <div className="bg-[#0c1729] rounded-[24px] md:rounded-[32px] p-6 md:p-10 shadow-2xl border border-slate-800 flex flex-col">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-6 md:mb-8 text-center lg:text-left">Connect With Us</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-              <a href="#" className="flex items-center gap-4 p-4 rounded-xl md:rounded-2xl bg-[#16213a] border border-slate-700/50 hover:bg-[#1f2b4a] hover:border-brand-terracotta transition-all group">
-                <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl">
+          <div className="bg-slate-900/50 backdrop-blur-xl rounded-[32px] md:rounded-[40px] p-6 md:p-10 border border-slate-800/50 flex flex-col justify-center">
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-8 text-center">Global Connections</h2>
+            <div className="space-y-4">
+              <a href="#" className="flex items-center gap-4 p-5 rounded-[20px] bg-white/5 border border-white/5 hover:bg-white/10 hover:border-brand-terracotta/50 transition-all group">
+                <div className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl shadow-lg">
                   <i className="fab fa-instagram"></i>
                 </div>
-                <span className="text-slate-300 text-sm md:text-base font-semibold group-hover:text-white transition-colors truncate">{STORE_CONTACT.instagram}</span>
+                <span className="text-slate-300 text-sm font-bold group-hover:text-white transition-colors truncate">{STORE_CONTACT.instagram}</span>
               </a>
-              <a href="#" className="flex items-center gap-4 p-4 rounded-xl md:rounded-2xl bg-[#16213a] border border-slate-700/50 hover:bg-[#1f2b4a] hover:border-brand-terracotta transition-all group">
-                <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-xl bg-[#0088cc] flex items-center justify-center text-white text-xl">
+              <a href="#" className="flex items-center gap-4 p-5 rounded-[20px] bg-white/5 border border-white/5 hover:bg-white/10 hover:border-brand-terracotta/50 transition-all group">
+                <div className="w-12 h-12 shrink-0 rounded-xl bg-[#0088cc] flex items-center justify-center text-white text-2xl shadow-lg">
                   <i className="fab fa-telegram-plane"></i>
                 </div>
-                <span className="text-slate-300 text-sm md:text-base font-semibold group-hover:text-white transition-colors truncate">{STORE_CONTACT.telegram}</span>
-              </a>
-              <a href={`https://wa.me/${STORE_CONTACT.whatsapp}`} target="_blank" className="flex items-center gap-4 p-4 rounded-xl md:rounded-2xl bg-[#16213a] border border-slate-700/50 hover:bg-[#1f2b4a] hover:border-brand-terracotta transition-all group sm:col-span-2 lg:col-span-1">
-                <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-xl bg-[#25d366] flex items-center justify-center text-white text-xl">
-                  <i className="fab fa-whatsapp"></i>
-                </div>
-                <span className="text-slate-300 text-sm md:text-base font-semibold group-hover:text-white transition-colors truncate">WhatsApp Shop</span>
+                <span className="text-slate-300 text-sm font-bold group-hover:text-white transition-colors truncate">{STORE_CONTACT.telegram}</span>
               </a>
             </div>
           </div>
         </div>
       </main>
 
-      <footer className="bg-[#0c1729] text-slate-400 pt-12 md:pt-16 pb-8 border-t border-slate-800">
+      <footer className="bg-slate-950/80 backdrop-blur-md text-slate-400 py-20 border-t border-slate-900">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-12 md:mb-16">
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-brand-navy to-brand-terracotta text-white rounded-xl flex items-center justify-center font-bold">NS</div>
-                <span className="text-white font-black text-xl md:text-2xl tracking-tighter">NSIP Store</span>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-12 text-center md:text-left">
+            <div className="space-y-4">
+              <div className="flex items-center justify-center md:justify-start gap-3">
+                <div className="w-12 h-12 bg-white/5 border border-white/10 text-white rounded-2xl flex items-center justify-center font-black text-xl">NS</div>
+                <span className="text-white font-black text-3xl tracking-tighter">NSIP Store</span>
               </div>
-              <p className="text-xs md:text-sm leading-relaxed">
-                Your trusted partner for premium products, electronics, and digital tools. Quality assurance with authentic services since 2018.
+              <p className="max-w-xs text-xs font-medium leading-relaxed opacity-60">
+                Premium digital asset provisioner. Trusted by professionals since 2018.
               </p>
             </div>
-
-            <div className="hidden sm:block">
-              <h4 className="text-white font-bold text-lg mb-6">Quick Links</h4>
-              <ul className="space-y-3 text-sm font-medium">
-                <li><a href="#" className="hover:text-brand-terracotta transition-colors">All Products</a></li>
-                <li><a href="#" className="hover:text-brand-terracotta transition-colors">Payment Methods</a></li>
-                <li><a href="#" className="hover:text-brand-terracotta transition-colors">About Us</a></li>
-                <li><a href="#" className="hover:text-brand-terracotta transition-colors">Contact Support</a></li>
-              </ul>
-            </div>
-
-            <div className="sm:col-span-2 lg:col-span-2">
-              <h4 className="text-white font-bold text-lg mb-6">Contact Info</h4>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 text-sm font-medium">
-                <li className="flex items-center gap-3">
-                  <i className="fas fa-phone-alt text-brand-terracotta w-4"></i>
-                  <span><a href={`tel:${STORE_CONTACT.phone}`} className="text-slate-300 hover:text-white truncate">{STORE_CONTACT.phone}</a></span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <i className="fas fa-headset text-brand-terracotta w-4"></i>
-                  <span><a href={`tel:${STORE_CONTACT.support}`} className="text-slate-300 hover:text-white truncate">{STORE_CONTACT.support}</a></span>
-                </li>
-                <li className="flex items-center gap-3 sm:col-span-2">
-                  <i className="fas fa-wallet text-brand-terracotta w-4"></i>
-                  <span className="truncate">UPI: {STORE_CONTACT.upi}</span>
-                </li>
-              </ul>
+            
+            <div className="flex flex-wrap justify-center gap-8 md:gap-16">
+              <div>
+                <h4 className="text-white font-bold text-sm mb-4">Navigation</h4>
+                <ul className="space-y-2 text-xs font-bold uppercase tracking-widest">
+                  <li><a href="#" className="hover:text-brand-terracotta">Catalog</a></li>
+                  <li><a href="#" className="hover:text-brand-terracotta">VIP Access</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-white font-bold text-sm mb-4">Support</h4>
+                <ul className="space-y-2 text-xs font-bold uppercase tracking-widest">
+                  <li><a href="#" className="hover:text-brand-terracotta">Terminal</a></li>
+                  <li><a href="#" className="hover:text-brand-terracotta">Verify</a></li>
+                </ul>
+              </div>
             </div>
           </div>
           
-          <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-center">
-            <p>© {new Date().getFullYear()} NSIP Store. | Premium Retail Provider</p>
-            <div className="flex gap-4 md:gap-6 items-center">
-              <span className="flex items-center gap-2"><i className="fas fa-shield-alt text-emerald-500"></i> Secure Payments</span>
-              <span className="flex items-center gap-2"><i className="fas fa-check-circle text-emerald-500"></i> Trusted Seller</span>
+          <div className="mt-20 pt-8 border-t border-slate-900 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em]">
+            <p>© {new Date().getFullYear()} NSIP Store. | VERIFIED PREMIUM VENDOR</p>
+            <div className="flex gap-6 items-center grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all">
+               <span className="flex items-center gap-2"><i className="fas fa-shield-halved text-emerald-400"></i> SECURE</span>
+               <span className="flex items-center gap-2"><i className="fas fa-circle-check text-emerald-400"></i> AUTHENTIC</span>
             </div>
           </div>
         </div>
@@ -259,44 +278,44 @@ const App: React.FC = () => {
 
       <ChatBot isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
       
-      {isAdminOpen && <AdminDashboard onClose={() => setIsAdminOpen(false)} />}
+      {isAdminOpen && (
+        <AdminDashboard 
+          products={products}
+          onAddProduct={addProduct}
+          onRemoveProduct={removeProduct}
+          onUpdateProduct={updateProduct}
+          onClose={() => setIsAdminOpen(false)} 
+        />
+      )}
       
-      {/* Admin Password Prompt Modal */}
       {isPasswordPromptOpen && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-brand-navy/60 backdrop-blur-md" onClick={() => setIsPasswordPromptOpen(false)}></div>
-          <div className="relative w-full max-w-sm bg-white rounded-[24px] shadow-2xl p-8 animate-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-brand-navy text-white rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg">
-              <i className="fas fa-lock text-2xl"></i>
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={() => setIsPasswordPromptOpen(false)}></div>
+          <div className="relative w-full max-w-sm bg-slate-900 rounded-[32px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] p-10 animate-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-gradient-to-br from-brand-navy to-brand-terracotta text-white rounded-3xl flex items-center justify-center mb-8 mx-auto shadow-2xl">
+              <i className="fas fa-fingerprint text-3xl"></i>
             </div>
-            <h3 className="text-xl font-bold text-center text-brand-navy mb-2">Admin Authentication</h3>
-            <p className="text-slate-500 text-sm text-center mb-8">Enter the secret key to access the terminal.</p>
+            <h3 className="text-2xl font-black text-center text-white mb-2">Access Control</h3>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest text-center mb-10">Restricted Terminal Area</p>
             
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <form onSubmit={handlePasswordSubmit} className="space-y-6">
               <div>
                 <input 
                   autoFocus
                   type="password"
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Password"
-                  className={`w-full bg-slate-50 border ${passwordError ? 'border-red-500 ring-2 ring-red-100' : 'border-slate-200'} rounded-xl px-5 py-3 outline-none focus:ring-4 focus:ring-brand-navy/5 transition-all text-center font-mono`}
+                  placeholder="Terminal Key"
+                  className={`w-full bg-slate-800/50 border ${passwordError ? 'border-red-500 ring-2 ring-red-500/20' : 'border-white/10'} rounded-2xl px-6 py-4 outline-none focus:ring-4 focus:ring-brand-terracotta/20 transition-all text-center font-mono text-white tracking-[0.5em]`}
                 />
-                {passwordError && <p className="text-red-500 text-[10px] font-bold uppercase mt-2 text-center tracking-widest animate-pulse">Access Denied</p>}
+                {passwordError && <p className="text-red-500 text-[10px] font-black uppercase mt-4 text-center tracking-[0.2em] animate-pulse">Authentication Failed</p>}
               </div>
-              <div className="flex gap-3">
-                <button 
-                  type="button"
-                  onClick={() => setIsPasswordPromptOpen(false)}
-                  className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm"
-                >
-                  Cancel
-                </button>
+              <div className="flex gap-4">
                 <button 
                   type="submit"
-                  className="flex-1 py-3 bg-brand-navy text-white font-bold rounded-xl hover:bg-brand-navyLight transition-all text-sm shadow-lg shadow-brand-navy/20"
+                  className="w-full py-4 bg-white text-slate-950 font-black rounded-2xl hover:bg-brand-terracotta hover:text-white transition-all text-sm uppercase tracking-widest shadow-xl shadow-brand-terracotta/10"
                 >
-                  Verify Access
+                  Confirm Identity
                 </button>
               </div>
             </form>

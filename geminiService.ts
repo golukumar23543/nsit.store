@@ -1,32 +1,42 @@
 import { GoogleGenAI } from "@google/genai";
 import { PRODUCTS } from "./constants";
 
-export const askGemini = async (userQuery: string): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-  
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+
+export const getGeminiStream = async (userQuery: string) => {
   const context = PRODUCTS.map(p => 
     `${p.name} (${p.cat}) - ₹${p.price}, ${p.orderCount} orders, rating ${p.rating} stars. ${p.desc}`
   ).join('. ');
 
-  const systemPrompt = `You are the NSIP Store AI assistant. 
-    Information about our products: ${context}. 
-    Our contact: +91 91020 98613. 
-    Answer the user's questions about products, pricing, and the store concisely and politely. 
-    If they ask to buy, guide them to the 'Add to Cart' button.`;
+  const systemPrompt = `You are the NSIP Premium Digital Concierge.
+    Store Context:
+    - Products: ${context}
+    - Phone/Primary: +91 91020 98613
+    - Support Channel: +91 87091 07808
+    - Philosophy: Zero Waiting, Authentic Premium Assets.
+
+    RESPONSE GUIDELINES:
+    1. Tone: Professional, sophisticated, and helpful.
+    2. Formatting: Use structured lists for product recommendations. 
+    3. Prices: Always mention prices clearly using the ₹ symbol. 
+    4. Style: Use bolding for product names. Use bullet points (•) for features.
+    5. Call to Action: If the user is interested, tell them to "Add to VIP Inventory" or use the WhatsApp support.
+    6. Language: Keep it concise but elegant.`;
 
   try {
-    const response = await ai.models.generateContent({
+    const responseStream = await ai.models.generateContentStream({
       model: "gemini-3-flash-preview",
       contents: userQuery,
       config: {
         systemInstruction: systemPrompt,
-        temperature: 0.7,
+        temperature: 0.6,
+        thinkingConfig: { thinkingBudget: 0 } // Optimization for speed
       },
     });
 
-    return response.text || "I'm sorry, I couldn't process that right now.";
+    return responseStream;
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "Our AI assistant is currently taking a short break. Please feel free to browse our products or contact support directly!";
+    throw error;
   }
 };
