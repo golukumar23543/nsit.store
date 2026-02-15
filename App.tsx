@@ -13,15 +13,24 @@ import Hero from './components/Hero';
 const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<Category>('all');
   
-  // Products as state to allow dynamic updates
+  // Products as state with safety fallback
   const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('nsip_inventory');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+    try {
+      const saved = localStorage.getItem('nsip_inventory');
+      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+    } catch (e) {
+      console.error("Inventory parse error:", e);
+      return INITIAL_PRODUCTS;
+    }
   });
 
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('nsip_cart');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('nsip_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -33,7 +42,7 @@ const App: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Triple-click tracking for Admin Access
-  const logoClickTimer = useRef<number | null>(null);
+  const logoClickTimer = useRef<any>(null);
   const logoClickCount = useRef(0);
 
   useEffect(() => {
@@ -99,13 +108,9 @@ const App: React.FC = () => {
     return cart.reduce((sum, item) => sum + item.quantity, 0);
   }, [cart]);
 
-  // Triple click handler for the logo
   const handleLogoClick = useCallback(() => {
     logoClickCount.current += 1;
-    
-    if (logoClickTimer.current) {
-      window.clearTimeout(logoClickTimer.current);
-    }
+    if (logoClickTimer.current) window.clearTimeout(logoClickTimer.current);
 
     if (logoClickCount.current === 3) {
       setIsPasswordPromptOpen(true);
@@ -113,7 +118,7 @@ const App: React.FC = () => {
     } else {
       logoClickTimer.current = window.setTimeout(() => {
         logoClickCount.current = 0;
-      }, 500); // 500ms window to complete the 3 clicks
+      }, 500);
     }
   }, []);
 
@@ -291,7 +296,7 @@ const App: React.FC = () => {
       {isPasswordPromptOpen && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" onClick={() => setIsPasswordPromptOpen(false)}></div>
-          <div className="relative w-full max-w-sm bg-slate-900 rounded-[32px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] p-10 animate-in zoom-in duration-300">
+          <div className="relative w-full max-sm bg-slate-900 rounded-[32px] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] p-10 animate-in zoom-in duration-300">
             <div className="w-20 h-20 bg-gradient-to-br from-brand-navy to-brand-terracotta text-white rounded-3xl flex items-center justify-center mb-8 mx-auto shadow-2xl">
               <i className="fas fa-fingerprint text-3xl"></i>
             </div>

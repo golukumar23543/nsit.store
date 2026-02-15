@@ -1,9 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { PRODUCTS } from "./constants";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-
 export const getGeminiStream = async (userQuery: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  
   const context = PRODUCTS.map(p => 
     `${p.name} (${p.cat}) - ₹${p.price}, ${p.orderCount} orders, rating ${p.rating} stars. ${p.desc}`
   ).join('. ');
